@@ -1,0 +1,95 @@
+import numpy as np                # Librería NumPy: permite cálculos matemáticos y manejo de vectores/matrices
+import matplotlib.pyplot as plt   # Librería Matplotlib: usada para graficar trayectorias y visualizaciones
+
+# ----------------------------
+# PARÁMETROS DEL ROBOT
+# ----------------------------
+ancho_robot = 0.5  # Distancia entre orugas (m). Se toma entre los centros de cada oruga.
+dt = 0.1           # Intervalo de tiempo (s). Define cada cuánto se actualiza la simulación.
+
+# ----------------------------
+# FUNCIÓN DE SIMULACIÓN
+# ----------------------------
+def simular_movimiento(v_izq, v_der, pasos, x, y, theta):
+    # Inicializamos listas para guardar posiciones (X, Y) y orientaciones (theta)
+    trayectoria_x, trayectoria_y, orientaciones = [x], [y], [theta]
+
+    # Simulación paso a paso
+    for _ in range(pasos):
+        # Cálculo de velocidades
+        v = (v_izq + v_der) / 2              # Velocidad lineal promedio
+        w = (v_der - v_izq) / ancho_robot    # Velocidad angular (depende de diferencia entre orugas)
+
+        # Ecuaciones de movimiento (cinemática diferencial) - Descomponer movimiento lineal en componentes usando trigonometria - Si tetha=0, avanza en +X - Si theta=pi/2 avanza en +Y
+        dx = v * np.cos(theta) * dt          # Desplazamiento en X
+        dy = v * np.sin(theta) * dt          # Desplazamiento en Y
+        dtheta = w * dt                      # Cambio en orientación (ángulo)
+
+        # Actualización de posición y orientación - INTEGRACIÓN DE EULER
+        x += dx
+        y += dy
+        theta += dtheta
+
+        # Guardamos la nueva posición y orientación
+        trayectoria_x.append(x)
+        trayectoria_y.append(y)
+        orientaciones.append(theta)
+
+    # Retornamos toda la trayectoria y el estado final
+    return trayectoria_x, trayectoria_y, orientaciones, x, y, theta
+
+# ----------------------------
+# ESTADO INICIAL
+# ----------------------------
+x, y, theta = 0.0, 0.0, 0.0   # Robot comienza en origen (0,0) mirando hacia el eje X
+tray_x, tray_y, tray_theta = [], [], []   # Listas vacías para almacenar la trayectoria total
+
+# ----------------------------
+# ESCENARIO 1: Línea recta
+# Ambas orugas avanzan a la misma velocidad → movimiento rectilíneo
+# ----------------------------
+tx, ty, th, x, y, theta = simular_movimiento(1.0, 1.0, 50, x, y, theta)
+tray_x += tx
+tray_y += ty
+tray_theta += th
+
+# ----------------------------
+# ESCENARIO 2: Curva
+# Oruga derecha más rápida que la izquierda → giro hacia la izquierda
+# ----------------------------
+tx, ty, th, x, y, theta = simular_movimiento(0.5, 1.0, 50, x, y, theta)
+tray_x += tx
+tray_y += ty
+tray_theta += th
+
+# ----------------------------
+# ESCENARIO 3: Giro en el lugar
+# Una oruga avanza y la otra retrocede → robot rota sobre su eje
+# ----------------------------
+tx, ty, th, x, y, theta = simular_movimiento(-0.5, 0.5, 40, x, y, theta)
+tray_x += tx
+tray_y += ty
+tray_theta += th
+
+# ----------------------------
+# VISUALIZACIÓN
+# ----------------------------
+plt.figure(figsize=(8, 8))  # Tamaño del gráfico
+plt.plot(tray_x, tray_y, label='Trayectoria del robot (skid-steer)', color='blue') # Línea de trayectoria
+plt.plot(tray_x[0], tray_y[0], 'go', label='Inicio')   # Punto de inicio (verde)
+plt.plot(tray_x[-1], tray_y[-1], 'ro', label='Final')  # Punto final (rojo)
+
+# Flechas de orientación
+N = 5  # Cada cuántos puntos dibujar una flecha
+plt.quiver(tray_x[::N], tray_y[::N],
+           np.cos(tray_theta[::N]), np.sin(tray_theta[::N]),
+           angles='xy', scale_units='xy', scale=5, color='red', width=0.005, label="Orientación")
+
+# Configuración de la gráfica
+plt.title('Simulación de trayectoria con orientación - Robot Skid-Steer')
+plt.xlabel('X (m)')
+plt.ylabel('Y (m)')
+plt.legend()
+plt.grid(True)
+plt.axis('equal')  # Escalas iguales en X y Y
+plt.show()
